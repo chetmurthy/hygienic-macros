@@ -13,6 +13,6 @@ description = "Hygienic Macros"
 
 archive(byte) = "pa_hmac.cmo"
 archive(native) = "pa_hmac.cmx"
-requires = "fmt,camlp5.extend,camlp5.parser_quotations,camlp5.pa_r.link"
+requires = "fmt,camlp5.extend,camlp5.parser_quotations,camlp5.pa_r.link,pa_ppx.base.link"
 
 EOF
