@@ -12,6 +12,28 @@ type tt = [
 ]
 ;
 
+value rec recognize_rules tts =
+  match tts with [
+      [(MATCHED _ _ as mtts); TOKEN ("","=>"); (MATCHED _ _ as etts); TOKEN ("",";") :: tl] ->
+      [(mtts, etts) :: recognize_rules tl]
+    | [(MATCHED _ _ as mtts); TOKEN ("","=>"); (MATCHED _ _ as etts)] ->
+      [(mtts, etts)]
+    | [] -> []
+    ]
+;
+
+value recognize_macro_rules ptt =
+  match ptt with [
+      MATCHED _ tts ->
+      let l = recognize_rules tts in
+      l
+    ]
+;
+
+value register_macro_rules name ptt =
+  let _ = recognize_macro_rules ptt in
+  () ;
+
 value is_not_endparen = fun [
   ("",s) -> s <> ")" &&  s <> "]" &&  s <> "}"
 | (c,_) -> c <> ""
@@ -42,6 +64,7 @@ and pa_tt strm =
   | [: :] -> List.rev acc
   ] in
   parec [] strm
+
 and pa_paren_tt_element = parser [
   [: `("","(") ; l = pa_tt ; `("",")") :] -> MATCHED PAREN l
 | [: `("","[") ; l = pa_tt ; `("","]") :] -> MATCHED BRACKET l
@@ -82,10 +105,21 @@ value paren_tt_element =
 ;
 
 EXTEND
-  GLOBAL: expr ;
+  GLOBAL: expr str_item ;
 
   expr: LEVEL "simple" [
-    [ "MACRO" ; name = UIDENT ; "!" ; body = paren_tt_element -> let s = "gargle" in <:expr< $str:s$ >>
+    [ "MACRO_EXPR" ; name = UIDENT ; "!" ; body = paren_tt_element -> let s = "gargle" in <:expr< $str:s$ >>
+    ]
+  ]
+  ;
+
+  str_item: LEVEL "top" [
+    [ "MACRO_RULES" ; "!" ; name = UIDENT ; body = paren_tt_element -> do {
+        register_macro_rules name body ;
+        <:str_item< declare end >>
+      }
+    | "MACRO_STR_ITEM" ; name = UIDENT ; "!" ; body = paren_tt_element ->
+       <:str_item< declare end >>
     ]
   ]
   ;

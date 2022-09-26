@@ -7,7 +7,13 @@ open Pa_ppx_testutils.Papr_util ;;
 
 #require "hygienic-macros";;
 
-{| GARGLE ; |} |> PAPR.Implem.pa1 ;;
+open Pa_hmac ;;
+#trace recognize_rules;;
+
+{| MACRO_RULES! FOO { () => {}} ; |} |> PAPR.Implem.pa1 ;;
+
+{| MACRO_EXPR FOO! { () => {}} ; |} |> PAPR.Implem.pa1 ;;
+{| MACRO_STR_ITEM FOO! { () => {}} ; |} |> PAPR.Implem.pa1 ;;
 
 (*
 ;;; Local Variables: ***
