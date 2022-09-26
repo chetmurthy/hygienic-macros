@@ -1,0 +1,17 @@
+#use "topfind";;
+#require "result,vector";;
+#require "pa_ppx.testutils";;
+#require "camlp5.pa_r" ;;
+
+open Pa_ppx_testutils.Papr_util ;;
+
+#require "hygienic-macros";;
+
+{| GARGLE ; |} |> PAPR.Implem.pa1 ;;
+
+(*
+;;; Local Variables: ***
+;;; mode:tuareg ***
+;;; End: ***
+
+*)

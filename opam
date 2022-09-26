@@ -1,0 +1,29 @@
+synopsis: "Hygienic macros"
+description:
+"""
+Hygienic macros
+"""
+opam-version: "2.0"
+maintainer: "Chet Murthy <chetsky@gmail.com>"
+authors: ["Chet Murthy"]
+homepage: "https://github.com/chetmurthy/arglebargle"
+license: "BSD-3-Clause"
+bug-reports: "https://github.com/chetmurthy/hygienic-macros/issues"
+dev-repo: "git+https://github.com/chetmurthy/hygienic-macros.git"
+doc: "https://github.com/chetmurthy/hygienic-macros/doc"
+
+depends: [
+  "ocaml"       { >= "4.14.0" }
+  "conf-perl"
+  "conf-perl-ipc-system-simple"
+  "conf-perl-string-shellquote"
+  "ounit" {with-test}
+  "result"
+  "rresult"
+  "vector"
+]
+build: [
+  [make "sys"]
+  [make "test"] {with-test}
+]
+install: [make "install"]
