@@ -8,12 +8,17 @@ open Pa_ppx_testutils.Papr_util ;;
 #require "hygienic-macros";;
 
 open Pa_hmac ;;
-#trace recognize_rules;;
+#trace recognize_macro_rules;;
 
-{| MACRO_RULES! FOO { () => {}} ; |} |> PAPR.Implem.pa1 ;;
+let pa1 strm =
+  Ploc.call_with Plexer.force_antiquot_loc true PAPR.Implem.pa1 strm
+;;
 
-{| MACRO_EXPR FOO! { () => {}} ; |} |> PAPR.Implem.pa1 ;;
-{| MACRO_STR_ITEM FOO! { () => {}} ; |} |> PAPR.Implem.pa1 ;;
+{| MACRO_RULES! FOO { () => {}} ; |} |> pa1 ;;
+{| MACRO_RULES! FOO { () => {} ; ($a$) => [b]{b} } ; |} |> pa1 ;;
+
+{| MACRO_EXPR FOO! { () => {}} ; |} |> pa1 ;;
+{| MACRO_STR_ITEM FOO! { () => {}} ; |} |> pa1 ;;
 
 (*
 ;;; Local Variables: ***

@@ -2,22 +2,45 @@
 open Pcaml ;
 open Pa_ppx_base ;
 open Ppxutil ;
+open Pp_MLast ;
 
-type paren_t = [ PAREN | BRACKET | BRACE ] ;
+type paren_t = [ PAREN | BRACKET | BRACE ][@@deriving show;] ;
+
+type token = (string * string)[@@deriving show;] ;
 
 type tt = [
     MATCHED of paren_t and list tt
-  | TOKEN of Grammar.token
+  | TOKEN of token
   | VAR of Ploc.t and option string and string
 ]
+[@@deriving show;]
+;
+
+type rule_t = {
+    matcher: tt
+  ; freshlist: list token
+  ; expansion: tt
+  }
+;
+
+value recognize_freshvars l =
+  l |> List.map (fun [ TOKEN(("LIDENT",_) as t) -> t
+                     | t -> Fmt.(failwithf "recognize_freshvars: encountered non-LIDENT %a" pp_tt t) ])
+
 ;
 
 value rec recognize_rules tts =
   match tts with [
       [(MATCHED _ _ as mtts); TOKEN ("","=>"); (MATCHED _ _ as etts); TOKEN ("",";") :: tl] ->
-      [(mtts, etts) :: recognize_rules tl]
+      [{matcher=mtts; freshlist=[]; expansion=etts} :: recognize_rules tl]
     | [(MATCHED _ _ as mtts); TOKEN ("","=>"); (MATCHED _ _ as etts)] ->
-      [(mtts, etts)]
+      [{matcher=mtts; freshlist=[]; expansion=etts}]
+    | [(MATCHED _ _ as mtts); TOKEN ("","=>"); (MATCHED _ ftts); (MATCHED _ _ as etts); TOKEN ("",";") :: tl] ->
+       let l = recognize_freshvars ftts in
+      [{matcher=mtts; freshlist=l; expansion=etts} :: recognize_rules tl]
+    | [(MATCHED _ _ as mtts); TOKEN ("","=>"); (MATCHED _ ftts); (MATCHED _ _ as etts)] ->
+       let l = recognize_freshvars ftts in
+      [{matcher=mtts; freshlist=l; expansion=etts}]
     | [] -> []
     ]
 ;

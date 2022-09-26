@@ -10,7 +10,7 @@ RM=rm
 
 LAUNCH=env TOP=$(TOP) $(TOP)/tools/LAUNCH
 OCAMLFIND=$(LAUNCH) ocamlfind
-PACKAGES := $(PACKAGES),fmt,camlp5.pa_r.link,camlp5.extend,camlp5.parser_quotations,pa_ppx.base
+PACKAGES := $(PACKAGES),fmt,camlp5.pa_r.link,camlp5.extend,camlp5.parser_quotations,pa_ppx.base,pa_ppx.deriving_plugins.std
 
 PACKNAME=hygienic-macros
 ML=\
