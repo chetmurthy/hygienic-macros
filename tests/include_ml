@@ -18,7 +18,7 @@ let pa1 strm =
 {| MACRO_RULES! FOO { () => {} ; ($a$) => [b]{b} } ; |} |> pa1 ;;
 
 {| MACRO_EXPR FOO! { () => {}} ; |} |> pa1 ;;
-{| MACRO_STR_ITEM FOO! { () => {}} ; |} |> pa1 ;;
+{| MACRO_STR_ITEM ECHO! { declare end } ; |} |> pa1 ;;
 
 (*
 ;;; Local Variables: ***

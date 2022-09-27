@@ -1,5 +1,6 @@
 
 open Pcaml ;
+open Pa_ppx_utils ;
 open Pa_ppx_base ;
 open Ppxutil ;
 open Pp_MLast ;
@@ -16,12 +17,42 @@ type tt = [
 [@@deriving show;]
 ;
 
+value start_paren = fun [
+  PAREN -> ("","(")
+| BRACKET -> ("","[")
+| BRACE -> ("","{")
+]
+;
+
+value end_paren = fun [
+  PAREN -> ("",")")
+| BRACKET -> ("","]")
+| BRACE -> ("","}")
+]
+;
+
+value rec flatten_tts l =
+  List.concat_map flatten_tt_element l
+and flatten_tt_element = fun [
+      TOKEN t -> [t]
+    | MATCHED ty l -> [start_paren ty]@(flatten_tts l)@[end_paren ty]
+]
+;
+
 type rule_t = {
-    matcher: tt
+    matcher: list tt
   ; freshlist: list token
-  ; expansion: tt
+  ; expansion: list tt
   }
 ;
+
+type macro_t = [
+    DECLARATIVE of (list rule_t)
+  | PROCEDURAL of (list tt) -> (list token)
+  ]
+;
+
+value macros = ref [] ;
 
 value recognize_freshvars l =
   l |> List.map (fun [ TOKEN(("LIDENT",_) as t) -> t
@@ -31,14 +62,14 @@ value recognize_freshvars l =
 
 value rec recognize_rules tts =
   match tts with [
-      [(MATCHED _ _ as mtts); TOKEN ("","=>"); (MATCHED _ _ as etts); TOKEN ("",";") :: tl] ->
+      [(MATCHED _ mtts); TOKEN ("","=>"); (MATCHED _ etts); TOKEN ("",";") :: tl] ->
       [{matcher=mtts; freshlist=[]; expansion=etts} :: recognize_rules tl]
-    | [(MATCHED _ _ as mtts); TOKEN ("","=>"); (MATCHED _ _ as etts)] ->
+    | [(MATCHED _ mtts); TOKEN ("","=>"); (MATCHED _ etts)] ->
       [{matcher=mtts; freshlist=[]; expansion=etts}]
-    | [(MATCHED _ _ as mtts); TOKEN ("","=>"); (MATCHED _ ftts); (MATCHED _ _ as etts); TOKEN ("",";") :: tl] ->
+    | [(MATCHED _ mtts); TOKEN ("","=>"); (MATCHED _ ftts); (MATCHED _ etts); TOKEN ("",";") :: tl] ->
        let l = recognize_freshvars ftts in
       [{matcher=mtts; freshlist=l; expansion=etts} :: recognize_rules tl]
-    | [(MATCHED _ _ as mtts); TOKEN ("","=>"); (MATCHED _ ftts); (MATCHED _ _ as etts)] ->
+    | [(MATCHED _ mtts); TOKEN ("","=>"); (MATCHED _ ftts); (MATCHED _ etts)] ->
        let l = recognize_freshvars ftts in
       [{matcher=mtts; freshlist=l; expansion=etts}]
     | [] -> []
@@ -54,8 +85,38 @@ value recognize_macro_rules ptt =
 ;
 
 value register_macro_rules name ptt =
-  let _ = recognize_macro_rules ptt in
-  () ;
+  let r = recognize_macro_rules ptt in do {
+    Std.push macros (name, DECLARATIVE r) ;
+    ()
+  }
+ ;
+
+value register_procedural_macro name f =
+  Std.push macros (name, PROCEDURAL f) ;
+
+value match_matcher mtts etts =
+  ()
+;
+
+value execute_declarative_macro rl tts =
+  assert False
+;
+
+value apply_macro e name tts =
+  let l =
+    match List.assoc name macros.val with [
+        PROCEDURAL f ->
+        f tts
+      | DECLARATIVE rl -> execute_declarative_macro rl tts
+      | exception Not_found ->
+         Fmt.(failwithf "apply_macro: macro %s not found" name)
+      ] in
+  Grammar.Entry.parse_token_stream e (Stream.of_list l)
+;
+
+value echo_macro tts = flatten_tts tts ;
+
+register_procedural_macro "ECHO" echo_macro ;
 
 value is_not_endparen = fun [
   ("",s) -> s <> ")" &&  s <> "]" &&  s <> "}"
@@ -95,28 +156,6 @@ and pa_paren_tt_element = parser [
 ]
 ;
 
-value start_paren = fun [
-  PAREN -> ("","(")
-| BRACKET -> ("","[")
-| BRACE -> ("","{")
-]
-;
-
-value end_paren = fun [
-  PAREN -> ("",")")
-| BRACKET -> ("","]")
-| BRACE -> ("","}")
-]
-;
-
-value rec flatten_tt l =
-  List.concat_map flatten_tt_element l
-and flatten_tt_element = fun [
-      TOKEN t -> [t]
-    | MATCHED ty l -> [start_paren ty]@(flatten_tt l)@[end_paren ty]
-]
-;
-
 value tt =
   Grammar.Entry.of_parser gram "tt"
     pa_tt
@@ -142,7 +181,7 @@ EXTEND
         <:str_item< declare end >>
       }
     | "MACRO_STR_ITEM" ; name = UIDENT ; "!" ; body = paren_tt_element ->
-       <:str_item< declare end >>
+       apply_macro str_item name (match body with [ MATCHED _ l -> l ])
     ]
   ]
   ;
